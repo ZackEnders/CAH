@@ -1,0 +1,78 @@
+* {
+    box-sizing: border-box;
+}
+
+.left {
+    padding: 0 1.5rem;
+    border-right: 1px solid #f1f1f1;
+}
+
+.container {
+    display: flex;
+    width: 100%;
+}
+
+.cards {
+    padding: 0 1.5rem;
+}
+
+.cards__in-play {
+    position: relative;
+}
+
+.cards__in-play h3,
+.cards__in-hand h3 {
+    text-align: center;
+}
+
+.card__grid {
+    padding: 0;
+    list-style: none;
+    padding: 1rem;
+    border: 1px solid #f1f1f1;
+    display: flex;
+}
+
+.card {
+    border: 1px solid #000000;
+    padding: 1rem;
+    height: 225px;
+    width: 200px;
+    font-size: 20px;
+    border-radius: 3px;
+    margin-right: 1rem;
+}
+
+.card--black {
+    background-color: #000000;
+    color: #fff;
+}
+
+.card--white {
+    background-color: #ffffff;
+    color: #000000;
+}
+
+.arrow {
+    width: 30px;
+    height: 30px;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    -webkit-transform: translateY(-50%);
+    fill: #000;
+    cursor: pointer;
+}
+
+.arrow--left {
+    left: 5px;
+}
+
+.arrow--right {
+    left: auto;
+    right: 5px;
+}
+
+.arrow--disabled {
+    fill: rgba(0, 0, 0, 0.2);
+}
