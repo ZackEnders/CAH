@@ -8,6 +8,7 @@ const ws = new WebSocket(URL);
 
 const App = () => {
     const reducer = (state, action) => {
+        console.log('action ', action);
         switch (action.type) {
             case 'userInit':
                 return { ...state, player: action.payload };
@@ -38,6 +39,24 @@ const App = () => {
                 };
             case 'whiteCardUpdate':
                 return { ...state, player: { ...state.player, whiteCards: action.payload } };
+            case 'nextPlayer':
+                console.log(`Black Card: ${action.payload.winner.blackCard}, \n White Card: ${action.payload.winner.whiteCards.map((card) => card)}`);
+                return {
+                    ...state,
+                    game: {
+                        ...state.game,
+                        playerTurn: action.payload.game.playerTurn,
+                        inPlayCards: {
+                            ...action.payload.game.inPlayCards,
+                        },
+                    },
+                };
+            case 'wonBlack':
+                console.log(action.payload);
+                return {
+                    ...state,
+                    player: { ...state.player, blackCards: action.payload.blackCards },
+                };
             default:
                 throw new Error();
         }
@@ -55,8 +74,6 @@ const App = () => {
             // on receiving a message, add it to the list of messages
             const message = JSON.parse(evt.data);
             const { type, payload } = message;
-            console.log('type ', type);
-            console.log('payload ', payload);
             dispatch({
                 type,
                 payload,
@@ -95,6 +112,20 @@ const App = () => {
         }
     };
 
+    const selectWinner = (player) => {
+        console.log('player ', player);
+        ws.send(
+            JSON.stringify({
+                type: 'selectWinner',
+                payload: {
+                    playerTurn: state.player.playerID,
+                    ...player,
+                    blackCard: state.game.inPlayCards.blackCard,
+                },
+            })
+        );
+    };
+
     if (!state.game.isActive) {
         if (state.player === null) {
             return <div></div>;
@@ -107,7 +138,7 @@ const App = () => {
         return (
             <div className="container">
                 <div className="left">
-                    <h3 onClick={() => startGame()}>CAH</h3>
+                    <h3>CAH</h3>
                     <div className="black-card-container">
                         <div className="card card--black">{state.game.inPlayCards.blackCard.text}</div>
                     </div>
@@ -123,7 +154,7 @@ const App = () => {
                             {state.game.inPlayCards.whiteCards.map((player) => {
                                 return player.cards.map((card) => {
                                     return (
-                                        <li key={card} className="card card--white">
+                                        <li key={card} className="card card--white" onClick={() => selectWinner(player)}>
                                             {card}
                                         </li>
                                     );
@@ -135,7 +166,7 @@ const App = () => {
                         <h3>Your cards</h3>
                         <ul className="card__grid card__grid--player">
                             {state.player.whiteCards.map((card, index) => (
-                                <li key={card} className="card card--white" onClick={() => playWhiteCards(index)}>
+                                <li style={state.player.playerID === state.game.playerTurn ? { backgroundColor: 'red' } : { backgroundColor: 'white' }} key={card} className="card card--white" onClick={() => playWhiteCards(index)}>
                                     <span dangerouslySetInnerHTML={{ __html: card }}></span>
                                 </li>
                             ))}

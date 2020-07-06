@@ -3,10 +3,11 @@ const data = require('./data');
 
 const server = () => {
     const wss = new WebSocket.Server({ port: 8080 });
+    const cardData = { ...data };
 
     const addGameCards = () => {
-        gameCards.whiteCards = data.whiteCards;
-        gameCards.blackCards = data.blackCards;
+        gameCards.whiteCards = cardData.whiteCards;
+        gameCards.blackCards = cardData.blackCards;
     };
 
     // Generates unique ID for every new connection
@@ -19,7 +20,7 @@ const server = () => {
     };
 
     const getCard = () => {
-        return data.whiteCards.splice(0, 1)[0];
+        return cardData.whiteCards.splice(0, 1)[0];
     };
 
     let users = {};
@@ -29,7 +30,7 @@ const server = () => {
         whiteCards: [],
     };
 
-    const game = {
+    let game = {
         playerTurn: '',
         inPlayCards: {
             blackCard: '',
@@ -62,7 +63,6 @@ const server = () => {
 
         ws.on('message', function incoming(data) {
             const { type, payload } = JSON.parse(data);
-            console.log('payload ', payload);
             switch (type) {
                 case 'startGame':
                     addGameCards();
@@ -72,6 +72,17 @@ const server = () => {
                     });
 
                     const startingBlackCard = gameCards.blackCards.splice(0, 1)[0];
+
+                    game = {
+                        playerTurn: Object.keys(users).reduce((acc, user) => {
+                            if (users[user].host === true) acc = users[user].playerID;
+                            return acc;
+                        }, ''),
+                        inPlayCards: {
+                            blackCard: startingBlackCard,
+                            whiteCards: [],
+                        },
+                    };
 
                     wss.clients.forEach(function each(client) {
                         if (client.readyState === WebSocket.OPEN) {
@@ -92,7 +103,14 @@ const server = () => {
 
                     break;
                 case 'playCard':
-                    const { playerID, cards } = payload;
+                    // Keep our game date updated so if someone disconnects we can use it again
+                    game = {
+                        playerTurn: game.playerTurn,
+                        inPlayCards: {
+                            blackCard: game.inPlayCards.blackCard,
+                            whiteCards: [...game.inPlayCards.whiteCards, ...payload.cards.map((idx) => users[payload.playerID].whiteCards[idx])],
+                        },
+                    };
 
                     wss.clients.forEach(function each(client) {
                         if (client.readyState === WebSocket.OPEN) {
@@ -101,8 +119,8 @@ const server = () => {
                                 payload: {
                                     whiteCards: [
                                         {
-                                            playerID,
-                                            cards: cards.map((idx) => users[playerID].whiteCards[idx]),
+                                            playerID: payload.playerID,
+                                            cards: payload.cards.map((idx) => users[payload.playerID].whiteCards[idx]),
                                         },
                                     ],
                                 },
@@ -111,21 +129,63 @@ const server = () => {
                         }
                     });
 
-                    cards.forEach((card) => {
-                        delete users[playerID].whiteCards[card];
+                    payload.cards.forEach((card) => {
+                        delete users[payload.playerID].whiteCards[card];
                         const newCard = getCard();
-                        users[playerID].whiteCards[card] = newCard;
+                        users[payload.playerID].whiteCards[card] = newCard;
                     });
 
                     ws.send(
                         JSON.stringify({
                             type: 'whiteCardUpdate',
-                            payload: users[playerID].whiteCards,
+                            payload: users[payload.playerID].whiteCards,
                         })
                     );
 
                     break;
+                case 'selectWinner':
+                    const currentUser = Object.keys(users).indexOf(payload.playerTurn);
+                    console.log('currentUser ', currentUser);
+                    const nextUser = Object.keys(users)[currentUser + 1] || Object.keys(users)[0];
+                    console.log('nextUser ', nextUser);
 
+                    game = {
+                        playerTurn: nextUser,
+                        inPlayCards: {
+                            blackCard: gameCards.blackCards.splice(0, 1)[0],
+                            whiteCards: [],
+                        },
+                    };
+
+                    users[payload.playerID].blackCards = [...users[payload.playerID].blackCards, payload.blackCard.text];
+
+                    wss.clients.forEach(function each(client) {
+                        if (client.readyState === WebSocket.OPEN) {
+                            client.send(
+                                JSON.stringify({
+                                    type: 'nextPlayer',
+                                    payload: {
+                                        game,
+                                        winner: {
+                                            blackCard: payload.blackCard.text,
+                                            whiteCards: payload.cards,
+                                        },
+                                    },
+                                })
+                            );
+                        }
+
+                        if (client.id === payload.playerID && client.readyState === WebSocket.OPEN) {
+                            client.send(
+                                JSON.stringify({
+                                    type: 'wonBlack',
+                                    payload: {
+                                        blackCards: users[payload.playerID].blackCards,
+                                    },
+                                })
+                            );
+                        }
+                    });
                 default:
                     break;
             }
@@ -140,6 +200,7 @@ const server = () => {
                     return user;
                 }
             });
+            console.log('usersLeft ', usersLeft);
 
             if (!usersLeft.length) {
                 users = {};
