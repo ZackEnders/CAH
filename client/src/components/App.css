@@ -2,6 +2,11 @@
     box-sizing: border-box;
 }
 
+html,
+body {
+    height: 100%;
+}
+
 .left {
     padding: 0 1.5rem;
     border-right: 1px solid #f1f1f1;
@@ -23,6 +28,10 @@
 .cards__in-play h3,
 .cards__in-hand h3 {
     text-align: center;
+}
+
+.card__grid--played {
+    min-height: calc(225px + 2rem);
 }
 
 .card__grid {
@@ -75,4 +84,33 @@
 
 .arrow--disabled {
     fill: rgba(0, 0, 0, 0.2);
+}
+
+.card__container {
+    position: relative;
+}
+
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.9);
+    /* color: #fff; */
+    justify-content: center;
+    align-items: center;
+}
+
+.overlay .overlay__played {
+    background-color: white;
+    padding: 2rem;
+    border: 1px solid black;
+}
+
+.overlay .overlay__player-turn {
+    color: #fff;
+    background-color: black;
+    padding: 2rem;
+    border: 1px solid white;
 }
